@@ -19,23 +19,20 @@ def home():
     return "Бот работает стабильно! 🚀"
 
 def run_web():
-    # Render передает порт в переменную среды PORT, мы должны его "занять"
+    # Render передает порт в переменную среды PORT
     port = int(os.environ.get("PORT", 10000))
     app_web.run(host='0.0.0.0', port=port)
 
-# Запускаем Flask в отдельном потоке (daemon=True закроет поток при выключении бота)
+# Запускаем Flask в отдельном потоке
 threading.Thread(target=run_web, daemon=True).start()
 # ==========================================================
 
-# ОПТИМИЗАЦИЯ: Уровень логирования WARNING уменьшает нагрузку
+# ОПТИМИЗАЦИЯ: Уровень логирования WARNING
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 # === КОНФИГУРАЦИЯ ===
 TOKEN = "8213858702:AAFS23dAJDViTymEeEPzeh50cpwe8l2VwS0"
 LOG_GROUP_ID = -1003316835520 
-
-# ОБНОВЛЕННЫЕ ДАННЫЕ ПРОКСИ
-PROXY_URL = "socks5://86XFhWe7j9:e4GwQtyVaZ@84.201.182.112:1080"
 
 # --- ИНИЦИАЛИЗАЦИЯ БД ---
 def init_db():
@@ -388,8 +385,6 @@ if __name__ == '__main__':
     app = (
         ApplicationBuilder()
         .token(TOKEN)
-        .proxy(PROXY_URL)
-        .get_updates_proxy(PROXY_URL)
         .post_init(post_init)
         .build()
     )
@@ -402,5 +397,4 @@ if __name__ == '__main__':
     app.add_handler(CallbackQueryHandler(callback_handler))
     app.add_handler(MessageHandler(filters.ALL & (~filters.COMMAND), handle_content))
     
-    # drop_pending_updates=True пропустит старые сообщения при запуске
     app.run_polling(drop_pending_updates=True, poll_interval=1.0, timeout=30)
