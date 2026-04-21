@@ -1,19 +1,41 @@
-﻿import logging
+import logging
 import sqlite3
 import html
 import time
 import asyncio
 import math
+import os  # Для работы с переменными окружения Render
+import threading  # Для параллельного запуска веб-сервера
+from flask import Flask  # Для обхода ошибки портов на Render
 from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, constants, BotCommand, BotCommandScopeChat, BotCommandScopeAllPrivateChats
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters, CallbackQueryHandler
 
-# ОПТИМИЗАЦИЯ: Уровень логирования WARNING уменьшает нагрузку на процессор и диск
+# === БЛОК ОБХОДА ОШИБКИ PORT SCAN (ДЛЯ БЕСПЛАТНОГО RENDER) ===
+app_web = Flask('')
+
+@app_web.route('/')
+def home():
+    return "Бот работает стабильно! 🚀"
+
+def run_web():
+    # Render передает порт в переменную среды PORT, мы должны его "занять"
+    port = int(os.environ.get("PORT", 10000))
+    app_web.run(host='0.0.0.0', port=port)
+
+# Запускаем Flask в отдельном потоке (daemon=True закроет поток при выключении бота)
+threading.Thread(target=run_web, daemon=True).start()
+# ==========================================================
+
+# ОПТИМИЗАЦИЯ: Уровень логирования WARNING уменьшает нагрузку
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 # === КОНФИГУРАЦИЯ ===
 TOKEN = "8213858702:AAFS23dAJDViTymEeEPzeh50cpwe8l2VwS0"
 LOG_GROUP_ID = -1003316835520 
+
+# ОБНОВЛЕННЫЕ ДАННЫЕ ПРОКСИ
+PROXY_URL = "socks5://86XFhWe7j9:e4GwQtyVaZ@84.201.182.112:1080"
 
 # --- ИНИЦИАЛИЗАЦИЯ БД ---
 def init_db():
@@ -97,7 +119,7 @@ async def send_iron_log(context, sender, target_id, update: Update, event_type):
         cursor.execute('UPDATE msg_count SET total = total + 1 WHERE id = 1')
         conn.commit()
         conn.close()
-    except Exception as e:
+    except Exception:
         pass 
 
 # --- ОБРАБОТКА СООБЩЕНИЙ ---
@@ -171,7 +193,7 @@ async def handle_content(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
             s_msg = await update.message.reply_text("✅")
             await asyncio.sleep(2); await s_msg.delete()
-    except Exception as e:
+    except Exception:
         s_msg = await update.message.reply_text("❌"); await asyncio.sleep(2); await s_msg.delete()
 
 # --- КОМАНДА START ---
@@ -319,7 +341,8 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text("❌ Ответ отменен. Сообщение не будет отправлено.")
 
     elif data == "get_link":
-        bot_name = (await context.bot.get_me()).username
+        bot_info = await context.bot.get_me()
+        bot_name = bot_info.username
         user_link = f"https://t.me/{bot_name}?start={user_id}"
         link_text = (
             f"👋 <b>Твоя персональная ссылка:</b>\n\n"
@@ -365,6 +388,8 @@ if __name__ == '__main__':
     app = (
         ApplicationBuilder()
         .token(TOKEN)
+        .proxy(PROXY_URL)
+        .get_updates_proxy(PROXY_URL)
         .post_init(post_init)
         .build()
     )
@@ -377,4 +402,5 @@ if __name__ == '__main__':
     app.add_handler(CallbackQueryHandler(callback_handler))
     app.add_handler(MessageHandler(filters.ALL & (~filters.COMMAND), handle_content))
     
+    # drop_pending_updates=True пропустит старые сообщения при запуске
     app.run_polling(drop_pending_updates=True, poll_interval=1.0, timeout=30)
