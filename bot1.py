@@ -1,4 +1,4 @@
-import logging
+﻿import logging
 import sqlite3
 import html
 import time
@@ -14,9 +14,6 @@ logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(name)s - %(le
 # === КОНФИГУРАЦИЯ ===
 TOKEN = "8213858702:AAFS23dAJDViTymEeEPzeh50cpwe8l2VwS0"
 LOG_GROUP_ID = -1003316835520 
-
-# ОБНОВЛЕННЫЕ ДАННЫЕ ПРОКСИ
-PROXY_URL = "socks5://86XFhWe7j9:e4GwQtyVaZ@84.201.182.112:1080"
 
 # --- ИНИЦИАЛИЗАЦИЯ БД ---
 def init_db():
@@ -368,8 +365,6 @@ if __name__ == '__main__':
     app = (
         ApplicationBuilder()
         .token(TOKEN)
-        .proxy(PROXY_URL)
-        .get_updates_proxy(PROXY_URL)
         .post_init(post_init)
         .build()
     )
